@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Ошибка сервера{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="text-align: center; padding: 60px;">
+        <h1 style="font-size: 100px; color: #dc3545; margin-bottom: 20px;">500</h1>
+        <h2 style="margin-bottom: 20px;">Ошибка сервера</h2>
+        <p style="color: #666; margin-bottom: 30px; font-size: 18px;">
+            Произошла внутренняя ошибка сервера. Мы уже работаем над ее устранением
+        </p>
+        <a href="{{ url_for('index') }}" class="btn" style="padding: 15px 40px; font-size: 18px;">
+            На главную
+        </a>
+    </div>
+</div>
+{% endblock %}

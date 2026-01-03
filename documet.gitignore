@@ -1,0 +1,23 @@
+# Виртуальное окружение
+venv/
+.env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Базы данных
+*.db
+
+# Flask
+instance/
+static/uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}2FA Проверка - Messenger{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+        <h2 style="margin-bottom: 30px;">🔒 Двухфакторная аутентификация</h2>
+        
+        <p style="margin-bottom: 20px;">
+            Введите 6-значный код из приложения аутентификатора:
+        </p>
+        
+        <form method="POST" action="{{ url_for('verify_2fa_login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group" style="max-width: 200px; margin: 0 auto;">
+                <input type="text" 
+                       name="token" 
+                       class="form-control" 
+                       style="text-align: center; font-size: 24px; letter-spacing: 10px;"
+                       pattern="[0-9]{6}"
+                       maxlength="6"
+                       required
+                       autofocus>
+            </div>
+            
+            <button type="submit" class="btn" style="margin-top: 20px;">
+                Подтвердить
+            </button>
+        </form>
+        
+        <div style="margin-top: 30px; color: #666; font-size: 14px;">
+            <p>Откройте приложение аутентификатора (Google Authenticator, Authy и т.д.) и введите код</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelector('input[name="token"]').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
+</script>
+{% endblock %}

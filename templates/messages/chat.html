@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Чат с {{ other_user.username }} - Messenger{% endblock %}
+
+{% block scripts %}
+<script>
+// Глобальные переменные для WebSocket
+let socket = null;
+let currentUserId = {{ current_user.id }};
+let otherUserId = {{ other_user.id }};
+let typingTimeout = null;
+
+// Инициализация WebSocket
+function initWebSocket() {
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log('WebSocket подключен');
+        
+        // Присоединяемся к комнате пользователя
+        socket.emit('join_chat', { other_user_id: otherUserId });
+    });
+    
+    // Новое сообщение
+    socket.on('new_message', (data) => {
+        console.log('Новое сообщение:', data);
+        addMessageToChat(data, false);
+        scrollToBottom();
+    });
+    
+    // Пользователь печатает
+    socket.on('user_typing', (data) => {
+        if (data.sender_id === otherUserId) {
+            showTypingIndicator(data.sender_username);
+        }
+    });
+    
+    // Уведомления
+    socket.on('message_notification', (data) => {
+        if (data.sender_id === otherUserId) {
+            showNotification(`Новое сообщение от ${data.sender_username}`);
+        }
+    });
+    
+    // Статус пользователя
+    socket.on('user_status', (data) => {
+        if (data.user_id === otherUserId) {
+            updateUserStatus(data.status);
+        }
+    });
+    
+    // Ошибки
+    socket.on('error', (data) => {
+        console.error('WebSocket ошибка:', data.message);
+        showNotification(`Ошибка: ${data.message}`, 'error');
+    });
+}
+
+// Добавление сообщения в чат
+function addMessageToChat(messageData, isMine = true) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    
+    const messageClass = isMine ? 'sent' : 'received';
+    const senderName = isMine ? 'Вы' : messageData.sender_username;
+    
+    const date = new Date(messageData.created_at);
+    const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    messageDiv.className = `message ${messageClass}`;
+    messageDiv.innerHTML = `
+        <div style="margin-bottom: 5px;"><strong>${senderName}</strong></div>
+        <div>${escapeHtml(messageData.text)}</div>
+        <div class="message-time">${timeString} ${!messageData.is_read && !isMine ? '• Не прочитано' : ''}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Помечаем как прочитанное, если это сообщение от собеседника
+    if (!isMine && !messageData.is_read) {
+        socket.emit('read_message', { message_id: messageData.id });
+    }
+}
+
+// Отправка сообщения
+async function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const text = messageInput.value.trim();
+    
+    if (!text) return;
+    
+    // Очищаем поле ввода
+    messageInput.value = '';
+    
+    try {
+        // Отправляем через WebSocket
+        socket.emit('send_message', {
+            text: text,
+            receiver_id: otherUserId
+        });
+        
+        // Показываем временное сообщение
+        const tempMessage = {
+            id: 'temp_' + Date.now(),
+            text: text,
+            sender_id: currentUserId,
+            sender_username: 'Вы',
+            created_at: new Date().toISOString(),
+            is_read: false
+        };
+        
+        addMessageToChat(tempMessage, true);
+        scrollToBottom();
+        
+    } catch (error) {
+        console.error('Ошибка отправки:', error);
+        showNotification('Ошибка отправки сообщения', 'error');
+    }
+}
+
+// Статус "печатает"
+function onTyping() {
+    socket.emit('typing', { receiver_id: otherUserId });
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        // Автоматически сбрасываем статус через 2 секунды
+    }, 2000);
+}
+
+// Показать индикатор печатания
+function showTypingIndicator(username) {
+    const indicator = document.getElementById('typingIndicator');
+    indicator.textContent = `${username} печатает...`;
+    indicator.style.display = 'block';
+    
+    // Скрываем через 3 секунды
+    setTimeout(() => {
+        indicator.style.display = 'none';
+    }, 3000);
+}
+
+// Обновить статус пользователя
+function updateUserStatus(status) {
+    const statusElement = document.getElementById('userStatus');
+    if (statusElement) {
+        statusElement.textContent = status === 'online' ? '● Онлайн' : '● Не в сети';
+        statusElement.style.color = status === 'online' ? '#28a745' : '#dc3545';
+    }
+}
+
+// Показать уведомление
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = 'card';
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '1000';
+    notification.style.padding = '15px';
+    notification.style.background = type === 'error' ? '#f8d7da' : '#d4edda';
+    notification.style.borderLeft = `4px solid ${type === 'error' ? '#dc3545' : '#28a745'}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Прокрутка вниз
+function scrollToBottom() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Экранирование HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Загрузка истории сообщений
+async function loadMessageHistory() {
+    try {
+        const response = await fetch(`/api/messages/${otherUserId}`);
+        const data = await response.json();
+        
+        if (data.messages) {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            
+            data.messages.forEach(msg => {
+                addMessageToChat(msg, msg.sender_id === currentUserId);
+            });
+            
+            scrollToBottom();
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки истории:', error);
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация WebSocket
+    initWebSocket();
+    
+    // Загрузка истории сообщений
+    loadMessageHistory();
+    
+    // Загрузка статуса пользователя
+    updateUserStatus({{ 'true' if other_user.is_online else 'false' }});
+    
+    // Обработчик отправки сообщения
+    document.getElementById('sendButton').addEventListener('click', sendMessage);
+    
+    // Отправка по Enter (без Shift)
+    document.getElementById('messageInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Статус печатания
+    document.getElementById('messageInput').addEventListener('input', onTyping);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <!-- Заголовок чата -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="post-avatar" style="width: 60px; height: 60px; font-size: 24px;">
+                    {{ other_user.username[:1].upper() }}
+                </div>
+                <div>
+                    <h2 style="margin: 0;">{{ other_user.username }}</h2>
+                    <p style="margin: 5px 0 0 0; color: #666;">
+                        <span id="userStatus">
+                            {% if other_user.is_online %}
+                                ● Онлайн
+                            {% else %}
+                                ● Не в сети (был {{ other_user.last_seen.strftime('%d.%m.%Y %H:%M') }})
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('messages') }}" class="btn" style="background: #6c757d;">
+                ← Назад
+            </a>
+        </div>
+        
+        <!-- Чат -->
+        <div class="chat-container">
+            <div id="chatMessages" class="chat-messages">
+                <!-- Сообщения будут добавляться здесь -->
+            </div>
+            
+            <!-- Индикатор печатания -->
+            <div id="typingIndicator" 
+                 style="display: none; 
+                        padding: 10px; 
+                        background: #f1f0f0; 
+                        border-radius: 10px;
+                        margin-bottom: 10px;
+                        font-style: italic;
+                        color: #666;">
+            </div>
+            
+            <!-- Поле ввода -->
+            <div class="chat-input">
+                <textarea id="messageInput" 
+                          class="form-control" 
+                          placeholder="Введите сообщение..."
+                          rows="3"></textarea>
+                <button id="sendButton" class="btn">
+                    Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

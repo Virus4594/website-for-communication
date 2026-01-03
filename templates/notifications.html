@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="notifications-container">
+    <h2>Уведомления</h2>
+    
+    {% if notifications %}
+        <p>Всего уведомлений: {{ notifications|length }}</p>
+        
+        {% for item in notifications %}
+        <div class="notification-item {% if not item.notification.is_read %}unread{% endif %}">
+            <div class="notification-content">
+                <p><strong>Тип:</strong> {{ item.notification.type }}</p>
+                <p><strong>Содержание:</strong> {{ item.notification.content }}</p>
+                
+                {% if item.sender %}
+                <p><strong>От:</strong> {{ item.sender.username }}</p>
+                {% endif %}
+                
+                <p><strong>Время:</strong> {{ item.notification.created_at.strftime('%H:%M %d.%m.%Y') }}</p>
+                
+                {% if item.notification.type == 'friend_request' and item.sender %}
+                <div class="notification-actions">
+                    <form action="{{ url_for('accept_friend', friend_id=item.sender.id) }}" 
+                          method="POST" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success btn-sm">Принять</button>
+                    </form>
+                    <form action="{{ url_for('reject_friend', friend_id=item.sender.id) }}" 
+                          method="POST" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Отклонить</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>У вас нет уведомлений</p>
+    {% endif %}
+</div>
+{% endblock %}

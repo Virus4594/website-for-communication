@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Messenger{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="text-align: center;">
+        <h1 style="color: #4a6cf7; margin-bottom: 20px;">Добро пожаловать в Messenger</h1>
+        <p style="font-size: 18px; margin-bottom: 30px; color: #666;">
+            Современный мессенджер с возможностью обмена сообщениями, публикации постов и общения с друзьями
+        </p>
+        
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 40px;">
+            {% if not current_user %}
+                <a href="{{ url_for('register') }}" class="btn" style="padding: 15px 40px; font-size: 18px;">
+                    Начать общение
+                </a>
+                <a href="{{ url_for('login') }}" class="btn" style="background: #28a745; padding: 15px 40px; font-size: 18px;">
+                    Войти в аккаунт
+                </a>
+            {% else %}
+                <a href="{{ url_for('feed') }}" class="btn" style="padding: 15px 40px; font-size: 18px;">
+                    Перейти в ленту
+                </a>
+                <a href="{{ url_for('messages') }}" class="btn" style="background: #28a745; padding: 15px 40px; font-size: 18px;">
+                    Мои сообщения
+                </a>
+            {% endif %}
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 60px;">
+            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h3>💬 Реальный чат</h3>
+                <p>Общайтесь в реальном времени с помощью WebSocket технологий</p>
+            </div>
+            
+            <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                <h3>🔒 Безопасность</h3>
+                <p>Двухфакторная аутентификация и шифрование данных</p>
+            </div>
+            
+            <div class="card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                <h3>👥 Социальная сеть</h3>
+                <p>Друзья, посты, лайки и комментарии в одном месте</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

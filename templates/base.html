@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Messenger{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4a6cf7">
+    <meta name="description" content="Современный мессенджер">
+    <!-- CSRF защита -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- В head секции base.html добавьте: -->
+<style>
+.btn {
+    display: inline-block;
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+.btn:hover {
+    background: #0056b3;
+    color: white;
+    text-decoration: none;
+}
+.btn-success {
+    background: #28a745;
+}
+.btn-success:hover {
+    background: #1e7e34;
+}
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+</style>
+    <form id="csrf-form" style="display: none;">
+        {{ csrf_token() }}
+    </form>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('index') }}" style="font-size: 24px; font-weight: bold; color: #4a6cf7;">
+                Messenger
+            </a>
+        </div>
+        
+        <div class="nav-links">
+            {% if current_user %}
+                <a href="{{ url_for('feed') }}">Лента</a>
+                <a href="{{ url_for('messages') }}">Сообщения</a>
+                <a href="{{ url_for('friends') }}">Друзья</a>
+                <a href="{{ url_for('search') }}">Поиск</a>
+                <a href="{{ url_for('profile') }}">Профиль</a>
+                <a href="{{ url_for('notifications') }}">Уведомления</a>
+                <a href="{{ url_for('settings') }}">Настройки</a>
+                <a href="{{ url_for('logout') }}" class="btn-danger">Выйти</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Войти</a>
+                <a href="{{ url_for('register') }}">Регистрация</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Flash сообщения -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="card" style="background: {% if category == 'error' %}#f8d7da{% elif category == 'success' %}#d4edda{% else %}#d1ecf1{% endif %}; 
+                                           border-left: 4px solid {% if category == 'error' %}#dc3545{% elif category == 'success' %}#28a745{% else %}#17a2b8{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Основной контент -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    
+    <!-- Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('Service Worker зарегистрирован'))
+                .catch(err => console.log('Ошибка регистрации Service Worker:', err));
+        }
+    </script>
+</body>
+</html>

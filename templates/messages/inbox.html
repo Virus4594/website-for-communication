@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Сообщения - Messenger{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="margin-bottom: 30px;">💬 Мои сообщения</h1>
+    
+    <div style="display: flex; gap: 30px;">
+        <!-- Левая колонка - список чатов -->
+        <div style="flex: 1;">
+            <div class="card" style="height: 600px; overflow-y: auto;">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <input type="text" 
+                           id="searchChats" 
+                           class="form-control" 
+                           placeholder="Поиск чатов..."
+                           onkeyup="searchChats()">
+                </div>
+                
+                {% if conversations %}
+                    {% for conv in conversations %}
+                    <div class="chat-item" 
+                         style="padding: 15px; border-bottom: 1px solid #eee; cursor: pointer;"
+                         onclick="window.location.href='{{ url_for('chat', username=conv.user.username) }}'">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div class="post-avatar" style="width: 50px; height: 50px;">
+                                {{ conv.user.username[:1].upper() }}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <strong>{{ conv.user.username }}</strong>
+                                    <small style="color: #666;">
+                                        {{ conv.last_message.strftime('%H:%M') }}
+                                    </small>
+                                </div>
+                                <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+                                    {% if conv.unread_count > 0 %}
+                                        <span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">
+                                            {{ conv.unread_count }} новое
+                                        </span>
+                                    {% else %}
+                                        Последнее сообщение
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <p>У вас нет сообщений</p>
+                        <a href="{{ url_for('friends') }}" class="btn" style="margin-top: 20px;">
+                            Найти друзей
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Правая колонка - информация -->
+        <div style="flex: 2;">
+            <div class="card" style="height: 600px; display: flex; flex-direction: column;">
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 100px; margin-bottom: 20px;">💬</div>
+                    <h3>Выберите чат</h3>
+                    <p style="color: #666; margin: 20px 0;">
+                        Выберите диалог из списка слева, чтобы начать общение
+                    </p>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 30px;">
+                        <a href="{{ url_for('friends') }}" class="btn">
+                            Мои друзья
+                        </a>
+                        <a href="{{ url_for('search') }}" class="btn btn-success">
+                            Найти друзей
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function searchChats() {
+    const input = document.getElementById('searchChats');
+    const filter = input.value.toLowerCase();
+    const items = document.getElementsByClassName('chat-item');
+    
+    for (let item of items) {
+        const username = item.querySelector('strong').textContent.toLowerCase();
+        if (username.includes(filter)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

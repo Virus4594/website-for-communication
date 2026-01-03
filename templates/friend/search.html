@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск - Messenger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .search-form input {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-form input:focus {
+            outline: none;
+            border-color: #4a6cf7;
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
+        }
+        
+        .search-form button {
+            padding: 15px 30px;
+            background: #4a6cf7;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .search-form button:hover {
+            background: #3b5bdb;
+            transform: translateY(-2px);
+        }
+        
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .user-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            border: 1px solid #f1f1f1;
+        }
+        
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .user-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .user-id {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 25px;
+            background: #4a6cf7;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #3b5bdb;
+            transform: translateY(-2px);
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .no-results h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .no-results p {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .nav {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav a {
+            color: #4a6cf7;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+        
+        .nav a:hover {
+            color: #3b5bdb;
+            text-decoration: underline;
+        }
+        
+        .results-count {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .query-display {
+            text-align: center;
+            color: #4a6cf7;
+            font-size: 18px;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .users-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🔍 Поиск пользователей</h1>
+            
+            <form method="GET" action="/search" class="search-form">
+                <input type="text" 
+                       name="q" 
+                       value="{{ query if query else '' }}" 
+                       placeholder="Введите имя пользователя..." 
+                       autofocus>
+                <button type="submit">Найти</button>
+            </form>
+            
+            {% if query %}
+                {% if users and users|length > 0 %}
+                    <div class="query-display">
+                        Результаты поиска по запросу: "<strong>{{ query }}</strong>"
+                    </div>
+                    
+                    <div class="results-count">
+                        Найдено пользователей: {{ users|length }}
+                    </div>
+                    
+                    <div class="users-grid">
+                        {% for user in users %}
+                        <div class="user-card">
+                            <div class="user-avatar">
+                                {{ user.username[:1].upper() }}
+                            </div>
+                            <div class="user-name">{{ user.username }}</div>
+                            <div class="user-id">ID: {{ user.id }}</div>
+                            <a href="/profile/{{ user.username }}" class="btn">
+                                📱 Профиль
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-results">
+                        <h2>😕 Пользователи не найдены</h2>
+                        <p>По запросу "<strong>{{ query }}</strong>" ничего не найдено.</p>
+                        <p>Попробуйте изменить поисковый запрос</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-results">
+                    <h2>👀 Начните поиск</h2>
+                    <p>Введите имя пользователя в поле выше</p>
+                    <p>Вы можете искать друзей по имени или части имени</p>
+                </div>
+            {% endif %}
+            
+            <div class="nav">
+                <a href="/">🏠 На главную</a>
+                <a href="/friends">👥 Друзья</a>
+                <a href="/profile">👤 Мой профиль</a>
+                <a href="/messages">💬 Сообщения</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Автофокус на поле поиска
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('input[name="q"]');
+            if (searchInput) {
+                searchInput.focus();
+                // Помещаем курсор в конец текста
+                searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+            }
+        });
+        
+        // Подсветка результатов при наведении
+        document.querySelectorAll('.user-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.boxShadow = '0 15px 30px rgba(0, 0, 0, 0.15)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.05)';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Лента - Messenger{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+        <!-- Левая колонка - создание поста -->
+        <div style="flex: 1; min-width: 300px;">
+            <div class="card">
+                <h3 style="margin-bottom: 20px;">Создать пост</h3>
+                
+                <form method="POST" action="{{ url_for('create_post') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="form-group">
+                        <input type="text" name="title" class="form-control" 
+                               placeholder="Заголовок поста" 
+                               maxlength="120" 
+                               required>
+                        <small style="color: #666; font-size: 12px;">
+                            Максимум 120 символов
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <textarea name="content" class="form-control" 
+                                  rows="6" 
+                                  placeholder="Что у вас нового?" 
+                                  required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn" style="width: 100%;">
+                        📝 Опубликовать
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Боковая информация -->
+            <div class="card" style="margin-top: 20px;">
+                <h4 style="margin-bottom: 15px;">💡 Советы</h4>
+                <ul style="list-style: none; padding: 0; color: #666;">
+                    <li style="margin-bottom: 10px; padding-left: 20px;">
+                        ✓ Делитесь интересными мыслями
+                    </li>
+                    <li style="margin-bottom: 10px; padding-left: 20px;">
+                        ✓ Задавайте вопросы друзьям
+                    </li>
+                    <li style="margin-bottom: 10px; padding-left: 20px;">
+                        ✓ Публикуйте новости
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Правая колонка - лента постов -->
+        <div style="flex: 2; min-width: 500px;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">Лента новостей</h2>
+                <span style="color: #666;">
+                    {{ posts|length }} пост{{ 'а' if posts|length % 10 in [2,3,4] and posts|length % 100 not in [12,13,14] else 'ов' }}
+                </span>
+            </div>
+            
+            {% if posts %}
+                {% for post in posts %}
+                <div class="post" id="post-{{ post.id }}" style="margin-bottom: 25px;">
+                    <!-- Заголовок поста -->
+                    <div class="post-header" style="margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div class="post-avatar" 
+                                 style="width: 50px; height: 50px; 
+                                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                        color: white; 
+                                        border-radius: 50%; 
+                                        display: flex; 
+                                        align-items: center; 
+                                        justify-content: center; 
+                                        font-weight: bold; 
+                                        font-size: 20px;">
+                                {{ post.author.username[:1].upper() }}
+                            </div>
+                            <div>
+                                <h4 style="margin: 0;">
+                                    <a href="{{ url_for('user_profile', username=post.author.username) }}" 
+                                       style="color: #333; text-decoration: none;">
+                                        {{ post.author.username }}
+                                    </a>
+                                    {% if post.author.id == current_user.id %}
+                                    <span style="color: #4a6cf7; font-size: 12px;"> (Вы)</span>
+                                    {% endif %}
+                                </h4>
+                                <small style="color: #666;">
+                                    {{ post.created_at.strftime('%d.%m.%Y в %H:%M') }}
+                                    {% if post.created_at != post.updated_at %}
+                                        <br><em>(изменен: {{ post.updated_at.strftime('%d.%m.%Y в %H:%M') }})</em>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Содержание поста -->
+                    <div class="post-content" style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #2d3748;">{{ post.title }}</h3>
+                        <div style="white-space: pre-wrap; line-height: 1.6; font-size: 16px;">
+                            {{ post.content }}
+                        </div>
+                    </div>
+                    
+                    <!-- Действия -->
+                    <div class="post-actions" style="display: flex; gap: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                        <!-- Лайки -->
+                        <form action="{{ url_for('like_post', post_id=post.id) }}" 
+                              method="POST" 
+                              style="display: flex; align-items: center; gap: 5px;"
+                              class="like-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" 
+                                    class="like-btn {% if current_user in post.likes %}liked{% endif %}"
+                                    style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px;"
+                                    data-post-id="{{ post.id }}">
+                                {% if current_user in post.likes %}
+                                    ❤️
+                                {% else %}
+                                    🤍
+                                {% endif %}
+                            </button>
+                            <span id="likes-count-{{ post.id }}" style="font-weight: 600; color: #666;">
+                                {{ post.likes.count() }}
+                            </span>
+                        </form>
+                        
+                        <!-- Комментарии -->
+                        <button class="comment-btn" 
+                                onclick="toggleComments({{ post.id }})"
+                                style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; display: flex; align-items: center; gap: 5px;">
+                            💬
+                            <span id="comments-count-{{ post.id }}" style="font-weight: 600; color: #666;">
+                                {{ post.comments.count() }}
+                            </span>
+                        </button>
+                        
+                        <!-- Поделиться -->
+                        <button class="share-btn" 
+                                onclick="sharePost({{ post.id }})"
+                                style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px;">
+                            🔗
+                        </button>
+                    </div>
+                    
+                    <!-- Комментарии (скрыты по умолчанию) -->
+                    <div id="comments-{{ post.id }}" 
+                         style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h4 style="margin-bottom: 15px;">💬 Комментарии:</h4>
+                        
+                        <!-- Список комментариев -->
+                        <div id="comments-list-{{ post.id }}" style="margin-bottom: 20px;">
+                            {% if post.comments.count() > 0 %}
+                                {% for comment in post.comments.order_by(Comment.created_at.asc()).all() %}
+                                <div class="comment" style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 8px; border-left: 3px solid #4a6cf7;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="width: 30px; height: 30px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
+                                                {{ comment.author.username[:1].upper() }}
+                                            </div>
+                                            <strong style="font-size: 14px;">{{ comment.author.username }}</strong>
+                                        </div>
+                                        <small style="color: #666; font-size: 12px;">
+                                            {{ comment.created_at.strftime('%H:%M') }}
+                                        </small>
+                                    </div>
+                                    <p style="margin: 0; font-size: 14px;">{{ comment.content }}</p>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p style="color: #666; text-align: center; padding: 20px;">
+                                    Комментариев пока нет. Будьте первым!
+                                </p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Форма добавления комментария -->
+                        <form action="{{ url_for('add_comment', post_id=post.id) }}" 
+                              method="POST" 
+                              style="margin-top: 15px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" 
+                                       name="content" 
+                                       class="form-control" 
+                                       placeholder="Напишите комментарий..." 
+                                       required
+                                       style="flex: 1;">
+                                <button type="submit" class="btn" style="white-space: nowrap;">
+                                    Отправить
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="card" style="text-align: center; padding: 60px;">
+                    <div style="font-size: 80px; margin-bottom: 20px; color: #e2e8f0;">📭</div>
+                    <h3 style="margin-bottom: 15px; color: #666;">Лента пуста</h3>
+                    <p style="color: #666; margin-bottom: 30px; max-width: 500px; margin: 0 auto 30px;">
+                        Подпишитесь на друзей или опубликуйте первый пост!
+                    </p>
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <a href="{{ url_for('search') }}" class="btn">
+                            🔍 Найти друзей
+                        </a>
+                        <a href="{{ url_for('friends') }}" class="btn" style="background: #28a745;">
+                            👥 Мои друзья
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Пагинация -->
+            {% if posts|length >= 10 %}
+            <div style="text-align: center; margin-top: 40px;">
+                <button class="btn" onclick="loadMorePosts()" 
+                        style="background: #f8f9fa; color: #333; border: 1px solid #dee2e6;">
+                    📄 Загрузить еще
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Лайки через AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.like-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const postId = this.querySelector('.like-btn').dataset.postId;
+            const csrfToken = this.querySelector('input[name="csrf_token"]').value;
+            const likeBtn = this.querySelector('.like-btn');
+            const likesCount = document.getElementById(`likes-count-${postId}`);
+            
+            try {
+                const response = await fetch(`/like_post/${postId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `csrf_token=${csrfToken}`
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    likesCount.textContent = data.likes_count;
+                    
+                    if (data.liked) {
+                        likeBtn.innerHTML = '❤️';
+                        likeBtn.classList.add('liked');
+                        showToast('Пост понравился!', 'success');
+                    } else {
+                        likeBtn.innerHTML = '🤍';
+                        likeBtn.classList.remove('liked');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка лайка:', error);
+                // Если AJAX не работает, отправляем форму обычным способом
+                this.submit();
+            }
+        });
+    });
+});
+
+// Показ/скрытие комментариев
+function toggleComments(postId) {
+    const commentsSection = document.getElementById(`comments-${postId}`);
+    const commentBtn = document.querySelector(`[onclick="toggleComments(${postId})"]`);
+    
+    if (commentsSection.style.display === 'none' || !commentsSection.style.display) {
+        commentsSection.style.display = 'block';
+        commentBtn.innerHTML = '💬 Скрыть комментарии';
+        
+        // Прокручиваем к комментариям
+        commentsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        commentsSection.style.display = 'none';
+        commentBtn.innerHTML = '💬 Комментарии';
+    }
+}
+
+// Поделиться постом
+function sharePost(postId) {
+    const postUrl = `${window.location.origin}/post/${postId}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: document.querySelector(`#post-${postId} h3`).textContent,
+            text: 'Посмотрите этот пост в Messenger',
+            url: postUrl
+        })
+        .then(() => showToast('Пост успешно отправлен!', 'success'))
+        .catch(error => console.log('Ошибка sharing:', error));
+    } else {
+        // Fallback для браузеров без поддержки Web Share API
+        navigator.clipboard.writeText(postUrl)
+            .then(() => showToast('Ссылка скопирована в буфер обмена!', 'success'))
+            .catch(() => {
+                // Альтернативный способ копирования
+                const textArea = document.createElement('textarea');
+                textArea.value = postUrl;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Ссылка скопирована в буфер обмена!', 'success');
+            });
+    }
+}
+
+// Загрузка дополнительных постов
+function loadMorePosts() {
+    const postCount = document.querySelectorAll('.post').length;
+    
+    fetch(`/api/posts?offset=${postCount}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.posts && data.posts.length > 0) {
+                // Здесь будет логика добавления новых постов
+                showToast(`Загружено ${data.posts.length} новых постов`, 'success');
+            } else {
+                showToast('Больше постов нет', 'info');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки постов:', error);
+            showToast('Ошибка загрузки', 'error');
+        });
+}
+
+// Всплывающие уведомления
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        color: white;
+        border-radius: 8px;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+    
+    // Добавляем стили для анимации
+    if (!document.querySelector('#toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Автосохранение поста при наборе
+let saveTimeout;
+function autoSaveDraft() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        const title = document.querySelector('input[name="title"]').value;
+        const content = document.querySelector('textarea[name="content"]').value;
+        
+        if (title || content) {
+            localStorage.setItem('draft_title', title);
+            localStorage.setItem('draft_content', content);
+            console.log('Черновик сохранен');
+        }
+    }, 2000);
+}
+
+// Восстановление черновика при загрузке
+window.addEventListener('load', function() {
+    const savedTitle = localStorage.getItem('draft_title');
+    const savedContent = localStorage.getItem('draft_content');
+    
+    if (savedTitle || savedContent) {
+        if (confirm('У вас есть несохраненный черновик. Восстановить?')) {
+            document.querySelector('input[name="title"]').value = savedTitle || '';
+            document.querySelector('textarea[name="content"]').value = savedContent || '';
+        }
+    }
+});
+
+// Очистка черновика при отправке
+document.querySelector('form[action="{{ url_for("create_post") }}"]')?.addEventListener('submit', function() {
+    localStorage.removeItem('draft_title');
+    localStorage.removeItem('draft_content');
+});
+
+// Добавляем обработчики автосохранения
+document.querySelector('input[name="title"]')?.addEventListener('input', autoSaveDraft);
+document.querySelector('textarea[name="content"]')?.addEventListener('input', autoSaveDraft);
+</script>
+
+<style>
+/* Стили для лайков */
+.like-btn {
+    transition: transform 0.2s ease;
+}
+.like-btn:hover {
+    transform: scale(1.2);
+}
+.like-btn.liked {
+    animation: heartBeat 0.5s ease;
+}
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.3); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для комментариев */
+.comment {
+    transition: background-color 0.2s ease;
+}
+.comment:hover {
+    background-color: #f0f7ff !important;
+}
+
+/* Адаптивность */
+@media (max-width: 992px) {
+    .container > div {
+        flex-direction: column;
+    }
+    .container > div > div {
+        min-width: 100% !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .post-actions {
+        flex-wrap: wrap;
+        gap: 10px !important;
+    }
+    .post-header > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+}
+</style>
+{% endblock %}
