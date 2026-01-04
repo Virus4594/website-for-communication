@@ -3,9 +3,9 @@ from datetime import timedelta
 
 class Config:
     # Безопасность
-    SECRET_KEY = os.environ.get('ViRuS4594VS4594') or os.urandom(32)
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(32)
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_SECRET_KEY = "ViRuS4594VS4594"
+    WTF_CSRF_SECRET_KEY = "SECRET_KEY"
     # База данных
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///KDF.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
