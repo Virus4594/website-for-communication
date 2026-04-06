@@ -34,7 +34,7 @@
 
 ### 1. Клонирование репозитория
 ```bash
-git clone https://github.com/USERNAME/REPOSITORY_NAME.git
+git clone https://github.com/Virus4594/website-for-communication.git
 cd REPOSITORY_NAME
 ### 2. Создание вертуального окружения
 python -m venv venv
